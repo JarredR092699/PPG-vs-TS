@@ -1,0 +1,86 @@
+---
+title: "PPG vs TS%"
+author: "Jarred Robidoux"
+date: "2/11/2023"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# __Introduction__
+Today, I will be creating a scatterplot that displays a player's PPG vs their 
+True Shooting %. The data is provided by BasketballReference.com
+
+# __Load Packages__
+Let's load the require packages. 
+```{r}
+#install.packages("rvest")
+library(rvest)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("janitor")
+library(janitor)
+#install.packages("stringr")
+library(stringr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("prismatic")
+library(prismatic)
+#install.packages("ggrepel")
+library(ggrepel)
+```
+# __Pull the Data 1/2__ 
+```{r, echo = TRUE}
+#Upload the link of the site where the data will be coming from
+url <- "https://www.basketball-reference.com/leagues/NBA_2023_per_game.html"
+#Create "page" object and that sends link through the read_html() function
+html_content <- read_html(url)
+
+# html_nodes() to pull all nodes under the "table" label
+# For this, we are going to need to pull the per game and advanced tables 
+# per game 
+per_game <- html_content %>% html_table(header = TRUE)
+per_game <- per_game[[1]]
+
+# Upload second link 
+url2 <- "https://www.basketball-reference.com/leagues/NBA_2023_advanced.html"
+
+html_content2 <- read_html(url2)
+
+adv <- html_content2 %>%
+  html_table(header = T)
+adv <- adv[[1]]
+```
+
+# __Manipulating the Data__ 
+Now that we have both of our datasets loaded, it is time for us to do some tidying. 
+```{r}
+# First we can add the TS% column from the adv data frame to our per_game data frame
+col_to_add <- adv$`TS%`
+per_game$`TS%` <- col_to_add
+# Notice that within our per_game dataframe, almost all the values are set as characters
+# we need to change them to numerics.
+per_game$`TS%` <- as.numeric(per_game$`TS%`)
+per_game$PTS <- as.numeric(per_game$PTS)
+# We changed the important variables to numerics, now we can filter 
+nba <- per_game %>%
+  filter(PTS >= 20)
+```
+
+# __Plotting the Data__
+```{r}
+theme_jelly <- function(){
+  theme_minimal(base_size = 12, base_family = "Comic Sans MS") %+replace%
+    theme(
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = "floralwhite", color = "floralwhite")
+    )
+}
+
+graph <- nba %>%
+  ggplot(aes(x=as.numeric(PTS), y = as.numeric(`TS%`), label = Player))+
+  geom_point(aes(fill="red", color = after_scale(clr_darken(fill, 0.3))))
+```
+
